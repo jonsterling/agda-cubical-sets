@@ -183,7 +183,7 @@ module Interval where
   dec-eq #1 #0 = Dec.no (λ ())
   dec-eq #1 #1 = Dec.yes ≡.idn
 
-module Coord where
+module Symbol where
   data t : Set where
     2+_ : ℕ.t → t
 
@@ -207,13 +207,13 @@ module List where
 -- the cube category
 module □ where
   ctx : Set
-  ctx = List.t Coord.t
+  ctx = List.t Symbol.t
 
   record t (I : ctx) : Set where
     no-eta-equality
     constructor ι[_]
     field
-      π : Coord.t
+      π : Symbol.t
       .{∈} : List.◇ (≡._t π) I
 
   𝔉 : Functor.t (≡.cat ctx) Sets.cat
@@ -229,12 +229,12 @@ module □ where
     ext : ctx → Set
     ext I = t I ⊕.t Interval.t
 
-    data is-name {I : ctx} : ext I → Set where
-      ✓-is-name : {i : t I} → is-name (⊕.inl i)
+    data is-symbol {I : ctx} : ext I → Set where
+      ✓-is-symbol : {i : t I} → is-symbol (⊕.inl i)
 
-    is-name-dec : {I : ctx} (c : ext I) → Dec.t (is-name c)
-    is-name-dec (⊕.inl x) = ⊕.inl ✓-is-name
-    is-name-dec (⊕.inr x) = ⊕.inr (λ ())
+    is-symbol-dec : {I : ctx} (c : ext I) → Dec.t (is-symbol c)
+    is-symbol-dec (⊕.inl x) = ⊕.inl ✓-is-symbol
+    is-symbol-dec (⊕.inr x) = ⊕.inr (λ ())
 
     𝔐 : RelativeMonad.t 𝔉
     𝔐 =
@@ -245,10 +245,10 @@ module □ where
         }
       where
         bind : {a b : ctx} → (t a → ext b) → ext a → ext b
-        bind f m with is-name-dec m
+        bind f m with is-symbol-dec m
         bind f (⊕.inl x) | ⊕.inl x₁ = f x
         bind f (⊕.inr x) | ⊕.inl ()
-        bind f (⊕.inl x) | ⊕.inr p with p ✓-is-name
+        bind f (⊕.inl x) | ⊕.inr p with p ✓-is-symbol
         bind f (⊕.inl x) | ⊕.inr p | ()
         bind f (⊕.inr x) | ⊕.inr p = ⊕.inr x
 
@@ -262,8 +262,8 @@ module □ where
       π : t I → Ext.ext J
       inj
         : (i j : t I) (open ∏)
-        → Ext.is-name (π i)
-        → Ext.is-name (π j)
+        → Ext.is-symbol (π i)
+        → Ext.is-symbol (π j)
         → (π i ≡.t π j → i ≡.t j)
 
   syntax hom I J = [ I , J ]
@@ -284,7 +284,7 @@ module □ where
       φ : t _ → Ext.ext _
       φ = Ext.𝔐.bind (hom.π J→K) ∏.∘ hom.π I→J
 
-      φ-inj : (i j : _) → Ext.is-name (φ i) → Ext.is-name (φ j) → φ i ≡.t φ j → i ≡.t j
+      φ-inj : (i j : _) → Ext.is-symbol (φ i) → Ext.is-symbol (φ j) → φ i ≡.t φ j → i ≡.t j
       φ-inj i j pᵢ pⱼ q = {!!}
        -- with φ i | φ j | ≡.inspect (hom.π I→J i) | ≡.inspect (hom.π I→J j)
 
