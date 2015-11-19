@@ -245,15 +245,15 @@ module □ where
 
     -- Next, we define a new functor ctx[≡] ⇒ Set that takes a symbol context to
     -- its contents ∪ {0,1}
-    ext : ctx → Set
-    ext I = t I ⊕.t Interval.t
+    data ext (I : ctx) : Set where
+      sym : t I → ext I
+      dir : Interval.t → ext I
+
+    sym-inj : {I : ctx} → ≡.injective (sym {I})
+    sym-inj ≡.idn = ≡.idn
 
     data is-symbol {I : ctx} : ext I → Set where
-      ✓-is-symbol : {i : t I} → is-symbol (⊕.inl i)
-
-    is-symbol-dec : {I : ctx} (c : ext I) → Dec.t (is-symbol c)
-    is-symbol-dec (⊕.inl x) = ⊕.inl ✓-is-symbol
-    is-symbol-dec (⊕.inr x) = ⊕.inr (λ ())
+      ✓-is-symbol : {i : t I} → is-symbol (sym i)
 
     -- ext is a relative monad on 𝔉; I don't recall this being observed in the CSM
     -- literature, but it seems like a pretty nice way to characterize what's going on.
@@ -261,17 +261,13 @@ module □ where
     𝔐 =
       record
         { T = ext
-        ; ret = ⊕.inl
+        ; ret = sym
         ; bind = bind
         }
       where
         bind : {a b : ctx} → (t a → ext b) → ext a → ext b
-        bind f m with is-symbol-dec m
-        bind f (⊕.inl x) | ⊕.inl x₁ = f x
-        bind f (⊕.inr x) | ⊕.inl ()
-        bind f (⊕.inl x) | ⊕.inr p with p ✓-is-symbol
-        bind f (⊕.inl x) | ⊕.inr p | ()
-        bind f (⊕.inr x) | ⊕.inr p = ⊕.inr x
+        bind f (sym x) = f x
+        bind f (dir x) = dir x
 
     module 𝔐 = RelativeMonad.t 𝔐
 
@@ -290,8 +286,8 @@ module □ where
 
   idn : {I : ctx} → [ I , I ]
   idn =
-    ι[ ⊕.inl
-     , (λ i j _ _ → ⊕.inl-inj)
+    ι[ Ext.sym
+     , (λ i j _ _ → Ext.sym-inj)
      ]
 
   cmp : {I J K : ctx} → [ J , K ] → [ I , J ] → [ I , K ]
@@ -306,7 +302,6 @@ module □ where
 
       φ-inj : (i j : _) → Ext.is-symbol (φ i) → Ext.is-symbol (φ j) → φ i ≡.t φ j → i ≡.t j
       φ-inj i j pᵢ pⱼ q = {!!}
-       -- with φ i | φ j | ≡.inspect (hom.π I→J i) | ≡.inspect (hom.π I→J j)
 
   open ∐ using (_,_)
 
