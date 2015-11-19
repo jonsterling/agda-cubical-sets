@@ -1,5 +1,7 @@
 {-# OPTIONS --type-in-type #-}
 
+-- Inspired by Mark Bickford's Nuprl formalization of cubical sets
+
 module kan where
 
 module Cat where
