@@ -172,11 +172,6 @@ module ℕ where
   dec-eq (su M) (su .M) | Dec.yes ≡.idn = Dec.yes ≡.idn
   dec-eq (su M) (su N) | Dec.no p = Dec.no (λ q → p (su-inj q))
 
-module Fin where
-  data t : ℕ.t → Set where
-    ze : {n : _} → t (ℕ.su n)
-    su : {n : _} → t n → t (ℕ.su n)
-
 module Interval where
   data t : Set where
     #0 : t
@@ -190,28 +185,12 @@ module Interval where
 
 module Coord where
   data t : Set where
-    dim : Interval.t → t
     2+_ : ℕ.t → t
-
-  data is-name : t → Set where
-    ✓-is-name : {i : _} → is-name (2+ i)
-
-  is-name-dec : (i : t) → Dec.t (is-name i)
-  is-name-dec (dim x) = ⊕.inr (λ ())
-  is-name-dec (2+ x) = ⊕.inl ✓-is-name
-
-  dim-inj : {i j : Interval.t} → dim i ≡.t dim j → i ≡.t j
-  dim-inj ≡.idn = ≡.idn
 
   2+-inj : {i j : ℕ.t} → (2+ i) ≡.t (2+ j) → i ≡.t j
   2+-inj ≡.idn = ≡.idn
 
   dec-eq : Dec.≡ t
-  dec-eq (dim x) (dim y) with Interval.dec-eq x y
-  dec-eq (dim x) (dim y) | Dec.yes p = Dec.yes (≡.map p)
-  dec-eq (dim x) (dim y) | Dec.no p = Dec.no (λ q → p (dim-inj q))
-  dec-eq (dim x) (2+ x₁) = Dec.no (λ ())
-  dec-eq (2+ x) (dim x₁) = Dec.no (λ ())
   dec-eq (2+ x) (2+ y) with ℕ.dec-eq x y
   dec-eq (2+ x) (2+ y) | ⊕.inl p = Dec.yes (≡.map p)
   dec-eq (2+ x) (2+ y) | ⊕.inr p = Dec.no (λ q → p (2+-inj q))
@@ -221,14 +200,11 @@ module List where
     [] : t A
     _∷_ : A → t A → t A
 
-  data □ {A : Set} (P : A → Set) : t A → Set where
-    [] : □ P []
-    _∷_ : {x : A} {xs : t A} → P x → □ P xs → □ P (x ∷ xs)
-
   data ◇ {A : Set} (P : A → Set) : t A → Set where
     hd : {x : A} {xs : t A} → P x → ◇ P (x ∷ xs)
     tl : {x : A} {xs : t A} → ◇ P xs → ◇ P (x ∷ xs)
 
+-- the cube category
 module □ where
   ctx : Set
   ctx = List.t Coord.t
@@ -254,13 +230,11 @@ module □ where
     ext I = t I ⊕.t Interval.t
 
     data is-name {I : ctx} : ext I → Set where
-      ✓-is-name : {i : t I} → Coord.is-name (t.π i) → is-name (⊕.inl i)
+      ✓-is-name : {i : t I} → is-name (⊕.inl i)
 
     is-name-dec : {I : ctx} (c : ext I) → Dec.t (is-name c)
-    is-name-dec (⊕.inl i) with Coord.is-name-dec (t.π i)
-    is-name-dec (⊕.inl i) | Dec.yes p = Dec.yes (✓-is-name p)
-    is-name-dec (⊕.inl i) | Dec.no p = Dec.no (λ { (✓-is-name x) → p x })
-    is-name-dec (⊕.inr x) = Dec.no (λ ())
+    is-name-dec (⊕.inl x) = ⊕.inl ✓-is-name
+    is-name-dec (⊕.inr x) = ⊕.inr (λ ())
 
     𝔐 : RelativeMonad.t 𝔉
     𝔐 =
@@ -272,14 +246,11 @@ module □ where
       where
         bind : {a b : ctx} → (t a → ext b) → ext a → ext b
         bind f m with is-name-dec m
-        bind f ._ | ⊕.inl (✓-is-name {i} x) = f i
-        bind f (⊕.inl x) | ⊕.inr p with Coord.is-name-dec (t.π x)
-        bind f (⊕.inl x) | ⊕.inr p | ⊕.inl q with p (✓-is-name q)
-        bind f (⊕.inl x) | ⊕.inr p | ⊕.inl q | ()
-        bind f (⊕.inl ι[ Coord.dim x ]) | ⊕.inr p | ⊕.inr q = ⊕.inr x
-        bind f (⊕.inl ι[ Coord.2+ x ]) | ⊕.inr p | ⊕.inr q with q Coord.✓-is-name
-        bind f (⊕.inl ι[ Coord.2+ x ]) | ⊕.inr p | ⊕.inr q | ()
-        bind f (⊕.inr x) | ⊕.inr _ = ⊕.inr x
+        bind f (⊕.inl x) | ⊕.inl x₁ = f x
+        bind f (⊕.inr x) | ⊕.inl ()
+        bind f (⊕.inl x) | ⊕.inr p with p ✓-is-name
+        bind f (⊕.inl x) | ⊕.inr p | ()
+        bind f (⊕.inr x) | ⊕.inr p = ⊕.inr x
 
     module 𝔐 = RelativeMonad.t 𝔐
 
