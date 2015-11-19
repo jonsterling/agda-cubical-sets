@@ -177,7 +177,7 @@ module Fin where
     ze : {n : _} → t (ℕ.su n)
     su : {n : _} → t n → t (ℕ.su n)
 
-module I where
+module Interval where
   data t : Set where
     #0 : t
     #1 : t
@@ -190,7 +190,7 @@ module I where
 
 module Coord where
   data t : Set where
-    dim : I.t → t
+    dim : Interval.t → t
     2+_ : ℕ.t → t
 
   data is-name : t → Set where
@@ -200,14 +200,14 @@ module Coord where
   is-name-dec (dim x) = ⊕.inr (λ ())
   is-name-dec (2+ x) = ⊕.inl ✓-is-name
 
-  dim-inj : {i j : I.t} → dim i ≡.t dim j → i ≡.t j
+  dim-inj : {i j : Interval.t} → dim i ≡.t dim j → i ≡.t j
   dim-inj ≡.idn = ≡.idn
 
   2+-inj : {i j : ℕ.t} → (2+ i) ≡.t (2+ j) → i ≡.t j
   2+-inj ≡.idn = ≡.idn
 
   dec-eq : Dec.≡ t
-  dec-eq (dim x) (dim y) with I.dec-eq x y
+  dec-eq (dim x) (dim y) with Interval.dec-eq x y
   dec-eq (dim x) (dim y) | Dec.yes p = Dec.yes (≡.map p)
   dec-eq (dim x) (dim y) | Dec.no p = Dec.no (λ q → p (dim-inj q))
   dec-eq (dim x) (2+ x₁) = Dec.no (λ ())
@@ -251,7 +251,7 @@ module □ where
 
   module Ext where
     ext : ctx → Set
-    ext I = t I ⊕.t I.t
+    ext I = t I ⊕.t Interval.t
 
     data is-name {I : ctx} : ext I → Set where
       ✓-is-name : {i : t I} → Coord.is-name (t.π i) → is-name (⊕.inl i)
