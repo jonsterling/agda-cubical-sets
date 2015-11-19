@@ -94,6 +94,9 @@ module ≡ where
   data _t_ {A : Set} (M : A) : A → Set where
     idn : M t M
 
+  inv : {A : Set} {M N : A} → M t N → N t M
+  inv idn = idn
+
   map
     : {A B : Set} {P : A → B} {M N : A}
     → M t N
@@ -113,6 +116,15 @@ module ≡ where
   injective : {A B : Set} (F : A → B) → Set
   injective F = {M N : _} → F M t F N → M t N
 
+  decompose-injectivity
+    : {A B C : Set} {F : B → C} {G : A → B}
+    → {M N : _}
+    → (G M t G N → M t N)
+    → (F (G M) t F (G N) → G M t G N)
+    → F (G M) t F (G N)
+    → M t N
+  decompose-injectivity p q r = p (q r)
+
   cat : Set → Cat.t
   cat A =
     record
@@ -122,11 +134,26 @@ module ≡ where
       ; cmp = _∘_
       }
 
-  data Inspect {A : Set} (x : A) : Set where
-    _with-≡_ : (y : A) (eq : x t y) → Inspect x
+  data Unit : Set where
+    tt : Unit
 
-  inspect : {A : Set} (x : A) → Inspect x
-  inspect x = x with-≡ idn
+  Hidden : Set → Set
+  Hidden A = Unit → A
+
+  hide : {A : Set} {B : A → Set} → ((x : A) → B x) → ((x : A) → Hidden (B x))
+  hide f x unit = f x
+
+  -- Reveals a hidden value.
+
+  reveal : {A : Set} → Hidden A → A
+  reveal f = f tt
+
+  data Reveal_is_ {A : Set} (x : Hidden A) (y : A) : Set  where
+    [_] : (eq : reveal x t y) → Reveal x is y
+
+
+  inspect : {A : Set} {B : A → Set} (f : (x : A) → B x) (x : A) → Reveal (hide f x) is (f x)
+  inspect f x = [ idn ]
 
 
 module ⊕ where
@@ -255,7 +282,7 @@ module □ where
     sym-inj ≡.idn = ≡.idn
 
     data is-symbol {I : ctx} : ext I → Set where
-      ✓-is-symbol : {i : t I} → is-symbol (sym i)
+      ✓-is-symbol : (i : t I) → is-symbol (sym i)
 
     -- ext is a relative monad on 𝔉; I don't recall this being observed in the CSM
     -- literature, but it seems like a pretty nice way to characterize what's going on.
@@ -268,10 +295,18 @@ module □ where
         }
       where
         bind : {a b : ctx} → (t a → ext b) → ext a → ext b
-        bind f (sym x) = f x
-        bind f (dir x) = dir x
+        bind k (sym x) = k x
+        bind k (dir x) = dir x
 
     module 𝔐 = RelativeMonad.t 𝔐
+
+    data [bind] {a b : ctx} : (t a → ext b) → ext a → ext b → Set where
+      [bind]-sym : (k : _) (x : _) → [bind] k (sym x) (k x)
+      [bind]-dir : (k : _) (x : _) → [bind] k (dir x) (dir x)
+
+    [bind]-completeness : {a b : ctx} (k : t a → ext b) (m : ext a) → [bind] k m (𝔐.bind k m)
+    [bind]-completeness k (sym x) = [bind]-sym k x
+    [bind]-completeness k (dir x) = [bind]-dir k x
 
   record hom (I J : ctx) : Set where
     no-eta-equality
@@ -303,7 +338,12 @@ module □ where
       φ = Ext.𝔐.bind (hom.π J→K) ∏.∘ hom.π I→J
 
       φ-inj : (i j : _) → Ext.is-symbol (φ i) → Ext.is-symbol (φ j) → φ i ≡.t φ j → i ≡.t j
-      φ-inj i j pᵢ pⱼ q = {!!}
+      φ-inj i j pᵢ pⱼ q with hom.π I→J i | hom.π I→J j | Ext.[bind]-completeness (hom.π J→K) (hom.π I→J i) | Ext.[bind]-completeness (hom.π J→K) (hom.π I→J j)
+      φ-inj i j pᵢ () q | .(Ext.sym ι[ π ]) | .(Ext.dir x₁) | Ext.[bind]-sym ._ ι[ π ] | Ext.[bind]-dir ._ x₁
+      φ-inj i j () pⱼ q | .(Ext.dir x) | bbb | Ext.[bind]-dir ._ x | fff
+      φ-inj i j pᵢ pⱼ q | .(Ext.sym x) | .(Ext.sym x₁) | Ext.[bind]-sym ._ x | Ext.[bind]-sym ._ x₁ = hom.inj I→J i j {!!} {!!} {!!}
+
+      -- ^^^ For some reason, the Inspect idiom doesn't work properly anymore.
 
   open ∐ using (_,_)
 
