@@ -13,6 +13,15 @@ module Cat where
 
   open t public
 
+  _ᵒᵖ : t → t
+  𝒞 ᵒᵖ =
+    record
+      { obj = obj 𝒞
+      ; hom = λ a b → hom 𝒞 b a
+      ; idn = idn 𝒞
+      ; cmp = λ γ δ → cmp 𝒞 δ γ
+      }
+
 module Sets where
   t : Set
   t = Set
@@ -36,6 +45,12 @@ module Functor where
       hom : {a b : 𝒞.obj} → 𝒞.hom a b → 𝒟.hom (obj a) (obj b)
 
   open t public
+
+module Presheaf where
+  t : Cat.t → Set
+  t 𝒞 = Functor.t (𝒞 ᵒᵖ) Sets.cat
+    where
+      open Cat
 
 module RelativeMonad where
   record t {𝒞 𝒟 : Cat.t} (J : Functor.t 𝒞 𝒟) : Set where
@@ -209,6 +224,7 @@ module □ where
   ctx : Set
   ctx = List.t Symbol.t
 
+  -- We have a functor ctx[≡] ⇒ Set which takes symbol contexts to their contents
   record t (I : ctx) : Set where
     no-eta-equality
     constructor ι[_]
@@ -226,6 +242,9 @@ module □ where
   module 𝔉 = Functor.t 𝔉
 
   module Ext where
+
+    -- Next, we define a new functor ctx[≡] ⇒ Set that takes a symbol context to
+    -- its contents ∪ {0,1}
     ext : ctx → Set
     ext I = t I ⊕.t Interval.t
 
@@ -236,6 +255,8 @@ module □ where
     is-symbol-dec (⊕.inl x) = ⊕.inl ✓-is-symbol
     is-symbol-dec (⊕.inr x) = ⊕.inr (λ ())
 
+    -- ext is a relative monad on 𝔉; I don't recall this being observed in the CSM
+    -- literature, but it seems like a pretty nice way to characterize what's going on.
     𝔐 : RelativeMonad.t 𝔉
     𝔐 =
       record
@@ -253,7 +274,6 @@ module □ where
         bind f (⊕.inr x) | ⊕.inr p = ⊕.inr x
 
     module 𝔐 = RelativeMonad.t 𝔐
-
 
   record hom (I J : ctx) : Set where
     no-eta-equality
@@ -298,3 +318,8 @@ module □ where
       ; idn = idn
       ; cmp = cmp
       }
+
+
+module cSet where
+  t : Set
+  t = Presheaf.t □.cat
